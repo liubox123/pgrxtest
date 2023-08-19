@@ -1,0 +1,27 @@
+{
+    "version":"0.0.1",
+    "style":"fendui",
+    "name":"fendui1",
+    "localip":"192.168.1.2",
+    "dbuser":"postgres",
+    "dbpasswd":"postgres",
+    "nodes":[{
+        "name":"lvying",
+        "parentip":"192.168.1.4",
+        "redisport":"5678",
+        "channels":[
+            "LV_MSG_FEATURE_CHANNLE",
+            ""
+        ]
+    },
+    {
+    "name":"fendui2",
+    "parentip":"192.168.1.5",
+    "redisport":"5678",
+    "channels":[
+        "FENDUI_MSG_FEATURE_CHANNLE",
+        "CALC_MSG_CHANNLE"
+    ]}
+    ],
+    "params":{}
+}
