@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>     
+    <head>
+        <meta charset="utf-8">
+        <title>测试</title>
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    </html>
+        
+        
+    <body>
+        <script>
+            function check() {
+                var x =  document.getElementById('textinput');
+                $.ajax({
+  url: 'http://192.168.11.119:18000/a',
+  method: 'GET',
+  dataType:"text",
+  contentType: "application/x-www-form-urlencoded; charset=utf-8",
+// contentType:false,
+  data: "data="+document.getElementById('textinput').value,          
+  success: function(response) {
+    console.log('请求成功');
+    console.log(response); // 服务器返回的数据
+    var element = document.getElementById('result')
+    element.textContent = response 
+  },
+  error: function() {
+    console.log('请求失败');
+  }
+});}  
+        </script>
+        <h1>输入sql</h1>
+        <input type="text" value="这是输入框，请输入内容！" id="textinput"><br><!--输入框标签-->
+        <button type="submit" onclick="check()">按钮</button><!--按钮标签-->
+        <div>
+            <p id="result">
+            </p >
+        </div>
+    </body>
+</html>

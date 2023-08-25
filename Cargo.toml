@@ -19,6 +19,7 @@ pg_test = []
 actix-web = "4.3.1"
 lazy_static = "1.4.0"
 pgrx = {version="0.9.8",features=["pg14"]}
+serde_urlencoded = "0.7.1"
 
 [dev-dependencies]
 pgrx-tests = "=0.9.8"

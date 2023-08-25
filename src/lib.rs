@@ -4,7 +4,7 @@ use pgrx::datum::{FromDatum, IntoDatum};
 use pgrx::prelude::*;
 use std::time::Duration;
 use std::thread;
-use actix_web::{middleware, rt, web, App, HttpRequest, HttpServer};
+use actix_web::{middleware, rt, web, App, HttpRequest, HttpServer,Responder,HttpResponse,http::header};
 use pgrx::PgBuiltInOids;
 use pgrx::pg_sys;
 // use 
@@ -12,6 +12,8 @@ use lazy_static::*;
 use std::sync::mpsc::{channel,Sender,sync_channel,Receiver};
 use std::sync::Mutex;
 use std::sync::Arc;
+use serde_urlencoded;
+// use form_urlencoded;
 /*
     In order to use this bgworker with pgrx, you'll need to edit the proper `postgresql.conf` file in
     `~/.pgrx/data-PGVER/postgresql.conf` and add this line to the end:
@@ -41,12 +43,18 @@ pub extern "C" fn _PG_init() {
     // handletest.join().expect("msxxxxxg");
 }
 pub struct TestData{
-    data:i32
+    data:i32,
+    strinfo:String
 }
-async fn index(req: HttpRequest,sender: web::Data<Sender<TestData>>,recvser:web::Data<Arc<Mutex<Receiver<String>>>>) -> &'static str {
-    println!("REQ: {:?}", req);
+// async fn getdata(req: HttpRequest,sender: web::Data<Sender<TestData>>,recvser:web::Data<Arc<Mutex<Receiver<String>>>>) ->impl Responder {
 
-    sender.send(TestData{data:1}).expect("send error\n");
+async fn getdata(req: HttpRequest,sender: web::Data<Sender<TestData>>,recvser:web::Data<Arc<Mutex<Receiver<String>>>>) ->impl Responder {
+    println!("REQ: {:?}", req);
+    // println!("req string :{:?}", req.query_string());
+    let xxx= serde_urlencoded::from_str::<Vec<(String,String)>>(req.query_string()).unwrap();
+    // println!("xxx: {:#?}", xxx[0].1);
+    // let x = form_urlencoded::parse( req.query_string().as_bytes());
+    sender.send(TestData{data:1,strinfo:xxx[0].1}).expect("send error\n");
     let objects = Arc::new(Mutex::new(String::from("")));
     println!("REQ:2");
     let clone = Arc::clone(&objects);
@@ -63,11 +71,30 @@ async fn index(req: HttpRequest,sender: web::Data<Sender<TestData>>,recvser:web:
     
     let ssss = format!("{}", objects.lock().unwrap());
     println!("{}",ssss);
-    let x = recvser.lock().unwrap().recv().unwrap();
-    Box::leak(x.into_boxed_str())
+    let x = recvser.lock().unwrap().recv().unwrap().replace("//n", "<br>");;
+    // let strbase = String::from(include_str!("index.html"));
+    // let newstr =strbase.replace("!!!!!!!!!!!!!!", Box::leak(x.into_boxed_str())).replace("//n", "<br>");
+    HttpResponse::Ok().content_type("text/text; charset=utf-8")
+    .body(Box::leak(x.into_boxed_str()).to_owned())
+}
+async fn index(req: HttpRequest) ->impl Responder {
+
+    // let ret = *objects.lock().unwrap();
+    //     ret
+    
+    // let ssss = format!("{}", objects.lock().unwrap());
+    // println!("{}",ssss);
+    // let x = recvser.lock().unwrap().recv().unwrap();
+    let strbase = String::from(include_str!("index.html"));
+    // let newstr =strbase.replace("!!!!!!!!!!!!!!", Box::leak(x.into_boxed_str())).replace("//n", "<br>");
+    // HttpResponse::Ok().customize()
+    // HttpResponse::Ok().body("ok")
+    HttpResponse::Ok().content_type("text/html; charset=utf-8")
+    .body(Box::leak(strbase.into_boxed_str()).to_owned())
+            // .body(Box::leak(newstr.into_boxed_str()).to_owned())
     // recvser
     // "hello "
-    // Box::leak(ssss.into_boxed_str())
+    // Box::leak(newstr.into_boxed_str()).to_owned()
         // let x = Box::leak( (*objects.lock().unwrap()).into_boxed_str()); x
     // Box::leak(outstr.into_boxed_str())
     // result.unwrap()
@@ -106,10 +133,12 @@ pub extern "C" fn background_worker_main(arg: pg_sys::Datum) {
             BackgroundWorker::get_name()
         );
         let htser =  HttpServer::new(move|| {
-            App::new().service(web::resource("/").route(web::get().to(index)).app_data(web::Data::new(tx.clone())).app_data(web::Data::new(objects.clone())))
+            App::new()
+            .service(web::resource("/").route(web::get().to(index)))
+            .service(web::resource("/a").route(web::get().to(getdata)).app_data(web::Data::new(tx.clone())).app_data(web::Data::new(objects.clone())))
         })
 
-        .bind(("0.0.0.0", 18580));
+        .bind(("0.0.0.0", 18000));
         match htser {
             Ok(v)=>{
                 rt::System::new().block_on(v.run());
@@ -140,7 +169,7 @@ pub extern "C" fn background_worker_main(arg: pg_sys::Datum) {
     // did the initdb. You can specify a specific user with Some("my_user")
     BackgroundWorker::connect_worker_to_spi(Some("postgres"), None);
 
-    while BackgroundWorker::wait_latch(Some(Duration::from_secs(10))) {
+    while BackgroundWorker::wait_latch(Some(Duration::from_millis(100))) {
         // println!("testxxxx4 ");
         if BackgroundWorker::sighup_received() {
             // on SIGHUP, you might want to reload some external configuration or something
@@ -172,7 +201,7 @@ pub extern "C" fn background_worker_main(arg: pg_sys::Datum) {
                             //     }
                             // }
                             // tuple_table.column_name(i).unwrap()
-                            strall+= &String::from("\n");
+                            strall+= &String::from("//n");
                             for i in 1..tuple.columns()+1{
                                 let od = PgBuiltInOids::try_from(tuple.get_datum_by_ordinal(i).unwrap().oid());
                                 // let stroid = String::type_oid();
